@@ -1,0 +1,9 @@
+{:deps
+ {org.clojure/clojure {:mvn/version "1.11.1"}}
+ :aliases
+ {:dev
+  {:jvm-opts ["-ea"]
+   :extra-paths ["dev" "test"]
+   :extra-deps 
+   {org.clojure/tools.namespace {:mvn/version "1.3.0"}
+    mount/mount {:mvn/version "0.1.17"}}}}}
