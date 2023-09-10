@@ -18,33 +18,116 @@
       :else         (recur (next as) (next bs)))))
 
 (defn- split [s]
-  (let [[method path] (str/split s #"[/\s]+" 2)]
-    (->> (cons method (str/split path #"/+"))
+  (let [[_ method path] (re-matches #"(?:([a-zA-Z]+)\s+)?(.*)" s)]
+    (->> (str/split path #"/+")
+      (cons method)
       (remove str/blank?)
+      (map str/trim)
       vec)))
 
-(defn make-matcher [routes]
+(defn make-matcher
+  "Given set of routes, builds matcher structure. See `router`"
+  [routes]
   (->> routes
     (map (fn [[mask v]] [(split mask) v]))
     (sort-by first compare-masks)))
 
 (defn- matches? [mask path]
-  (loop [mask mask
-         path path]
+  (loop [mask   mask
+         path   path
+         params []]
     (let [m (first mask)
           p (first path)]
       (cond
-        (= "**" m)        true
-        (= nil mask path) true
-        (= nil mask)      false
-        (= nil path)      false
-        (= m p)           (recur (next mask) (next path))
-        (= "*" m)         (recur (next mask) (next path))))))
+        (= "**" m)        (if path
+                            (conj params (str/join "/" path))
+                            params)
+        (= nil mask path) params
+        (= nil mask)      nil
+        (= nil path)      nil
+        (= "*" m)         (recur (next mask) (next path) (conj params p))
+        (= m p)           (recur (next mask) (next path) params)))))
 
-(defn match [matcher path]
-  (let [path (split path)]
-    (reduce
-      (fn [_ [mask v]]
-        (when (matches? mask path)
-          (reduced v)))
-      nil matcher)))
+(defn- match-impl [matcher path]
+  (reduce
+    (fn [_ [mask v]]
+      (when-some [params (matches? mask path)]
+        (reduced [v params])))
+    nil matcher))
+
+(defn match
+  "Given matcher (see `make-matcher`) and a path, returns a vector of match and path params.
+   If nothing is found, returns nil.
+   
+     (let [matcher (make-matcher {\"GET /a/*/b/*\" :key})]
+       (match matcher \"/a/1/b/2\"))
+     ;; => [:key [\"1\" \"2\"]]"
+  [matcher path]
+  (match-impl matcher (split path)))
+
+(defn router
+  "Given set of routes, returns ring handler. Routes are map from strings to handlers:
+   
+     {<route> (fn [req] {:status 200, ...})}, ...}
+   
+   Some route examples:
+   
+     \"GET /\"                 ;; will match / only
+     \"GET /login\"            ;; will match /login
+     \"GET /article/*\"        ;; will match /article/1, /article/xxx, but not /article or /article/1/update
+     \"GET /article/*/*\"      ;; will match e.g. /article/1/update
+     \"GET /article/**\"       ;; will match both /article, /article/1 and /article/1/update and deeper
+     \"POST /login\"           ;; will match POST /login
+     \"GET /article/*/update\" ;; single stars can be in the middle of path, but double stars can’t
+     \"* /article\"            ;; method can be wildcard, too
+     \"GET /**\"               ;; will match anything GET
+     \"* /**\"                 ;; will match anything
+   
+   Routes are order-independent and sorted automatically by specificity. This allows overlapping:
+   
+     GET /article/*
+     GET /article/new
+   
+   can both co-exist, and /article/new will always be checked first before falling back into /article/*.
+   
+   Any explicit path segment has higher specificity than a star, so this:
+   
+     GET /article
+   
+   will always be matched before this (one path segment of any):
+   
+     GET /*
+  
+   Single star, in turn, has higher specificity than double star,
+   so this (any number of segments, 0-∞) will always match last:
+   
+     GET /**
+
+   Values captured by * and ** will be passed down as :path-params vector:
+   
+     {\"GET /a/*/b/*\"
+      (fn [req]
+        (let [[p p2] (:path-params req)] ;; e.g. [\"1\" \"2\"] if uri was /a/1/b/2
+          ...))
+     
+      \"GET /media/**\"
+      (fn [req]
+        (let [path (:path-params req)] ;; [] for /media
+                                       ;; [\"abc\"] for /media/abc
+                                       ;; [\"x/y/z\"] for /media/x/y/z
+          ...))}
+      
+      \"* /article/*\"
+      (fn [req]
+        (let [[method id] (:path-params req)] ;; [\"GET\" \"1\"] for GET /article/1
+          ...))}
+   "
+  [routes]
+  (let [matcher (make-matcher routes)]
+    (fn [req]
+      (let [{:keys [request-method uri]} req
+            path (cons
+                   (str/upper-case (name request-method))
+                   (remove str/blank? (str/split uri #"/+")))]
+        (when-some [[handler params] (match-impl matcher path)]
+          (handler (assoc req :path-params params)))))))

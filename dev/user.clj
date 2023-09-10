@@ -26,26 +26,23 @@
        (println (str "#p" (position) " " '~form " => (" (- (System/currentTimeMillis) t#) " ms) " res#)))
      res#))
 
-(defn stop []
-  (mount/stop))
-
-(defn refresh []
+(defn reload []
   (set! *warn-on-reflection* true)
-  (let [res (ns/refresh)]    
+  (let [res (ns/refresh)]
     (if (= :ok res)
       :ok
       (do
         (.printStackTrace ^Throwable res)
-        (throw res)))))
-
-(defn start []
-  (mount/start))
-
-(defn reload []
-  (stop)
-  (refresh)
-  (start)
+        (throw res))))
   :ready)
+
+(defn test-all []
+  (reload)
+  (let [{:keys [fail error] :as res} (test/run-all-tests #"clj-simple-router\..*")
+        res (dissoc res :type)]
+    (if (pos? (+ fail error))
+      (throw (ex-info "Tests failed" res))
+      res)))
 
 (defn -main [& {:as args}]
   (let [port (parse-long (get args "--port" "5555"))]
@@ -57,6 +54,6 @@
     (println "Started Socket REPL server on port" port)))
 
 (defn -test [_]
-  (refresh)
+  (reload)
   (let [{:keys [fail error]} (test/run-all-tests #"clj-simple-router\..*")]
     (System/exit (+ fail error))))
