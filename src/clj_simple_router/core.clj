@@ -131,3 +131,13 @@
                    (remove str/blank? (str/split uri #"/+")))]
         (when-some [[handler params] (match-impl matcher path)]
           (handler (assoc req :path-params params)))))))
+
+(defmacro routes [& body]
+  (let [req-sym 'req]
+    (into {}
+      (for [[path params handler] (partition 3 body)]
+        [path `(fn [~req-sym]
+                 (let [~params ~(if (vector? params)
+                                  `(:path-params ~req-sym)
+                                  req-sym)]
+                   ~handler))]))))

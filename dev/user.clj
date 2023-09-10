@@ -2,8 +2,7 @@
   (:require
     [clojure.core.server :as server]
     [clojure.test :as test]
-    [clojure.tools.namespace.repl :as ns]
-    [mount.core :as mount]))
+    [clojure.tools.namespace.repl :as ns]))
 
 (ns/disable-reload!)
 
