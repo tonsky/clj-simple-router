@@ -35,14 +35,6 @@
         (throw res))))
   :ready)
 
-(defn test-all []
-  (reload)
-  (let [{:keys [fail error] :as res} (test/run-all-tests #"clj-simple-router\..*")
-        res (dissoc res :type)]
-    (if (pos? (+ fail error))
-      (throw (ex-info "Tests failed" res))
-      res)))
-
 (defn -main [& {:as args}]
   (let [port (parse-long (get args "--port" "5555"))]
     (server/start-server
@@ -51,6 +43,14 @@
        :accept        'clojure.core.server/repl
        :server-daemon false})
     (println "Started Socket REPL server on port" port)))
+
+(defn test-all []
+  (reload)
+  (let [{:keys [fail error] :as res} (test/run-all-tests #"clj-simple-router\..*")
+        res (dissoc res :type)]
+    (if (pos? (+ fail error))
+      (throw (ex-info "Tests failed" res))
+      res)))
 
 (defn -test [_]
   (reload)

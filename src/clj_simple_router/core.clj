@@ -132,7 +132,35 @@
         (when-some [[handler params] (match-impl matcher path)]
           (handler (assoc req :path-params params)))))))
 
-(defmacro routes [& body]
+(defn wrap-routes
+  "Wraps existing handler, and if no route matched, will pass control to it"
+  [handler routes]
+  (let [router (router routes)]
+    (fn [req]
+      (or
+        (router req)
+        (handler req)))))
+
+(defmacro routes
+  "A convenience macro that helps you define routes.
+   
+     body :: (<path-template> <path-params-vector> <handler-body>)+
+   
+   By default, `<path-params-vector>` will be bound to `(:path-params req)`. If `<path-params-vector>` is not a vector, it’ll be bound to `req` instead.
+   
+   Returns routes map, suitable to be passed to `router` or `wrap-routes`.
+   
+   Example:
+   
+     (routes
+       \"GET /post/*/xxx/*\" [a b]
+       {:status 200, :body (str a b)}
+       
+       \"* /**\" req
+       (let [[method path] (:path-params req)]
+         ...))
+   "
+  [& body]
   (let [req-sym 'req]
     (into {}
       (for [[path params handler] (partition 3 body)]
