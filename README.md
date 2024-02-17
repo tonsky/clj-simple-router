@@ -136,7 +136,7 @@ There’s a helper macro, `router/routes`, that helps you build routes. It retur
   ...
 
   "* /**" req
-  (let [[method path] {:path-params req}]
+  (let [[method path] (:path-params req)}]
     ...))
 ```
 
