@@ -158,6 +158,42 @@ builds a terminal handler. It’ll try to process everything you throw at it.
 
 wraps an existing handler, and if no route matched, will pass control to it.
 
+### A simple complete example
+
+This is a simple namespace that sets up a map of routes and starts a Jetty server using them.
+
+```clojure
+(ns my-namespace
+  (:require [ring.adapter.jetty :refer [run-jetty]]
+            [ring.middleware.params :refer [wrap-params]]
+            [clj-simple-router.core :as router])
+  (:gen-class))
+
+(defn render-page [page-name]
+ ;; Your code here...
+)
+
+(def routes
+  {"GET /"
+   (fn [_req]
+     {:status 200
+      :body "<html><body><h1>It’s working!</h1></body></html>"})
+   "GET /pages/*"
+   (fn [req]
+     (let [page-name (first (:path-params req))]
+       (render-page page-name)))})
+
+(defn handler []
+  (-> (router/router routes)
+      (wrap-params)))
+
+(defn -main [& _args]
+  (run-jetty (handler) {:port 3001 :join? false}))
+
+(comment
+  (-main))
+```
+
 ## Scope
 
 What’s not in scope:
