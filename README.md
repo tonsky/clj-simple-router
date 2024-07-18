@@ -164,34 +164,41 @@ This is a simple namespace that sets up a map of routes and starts a Jetty serve
 
 ```clojure
 (ns my-namespace
-  (:require [ring.adapter.jetty :refer [run-jetty]]
-            [ring.middleware.params :refer [wrap-params]]
-            [clj-simple-router.core :as router])
-  (:gen-class))
+  (:require
+    [clj-simple-router.core :as router]
+    [ring.adapter.jetty :as jetty]
+    [ring.util.response :as response]))
 
-(defn render-page [page-name]
- ;; Your code here...
-)
+(defn render-page
+  ([page-name]
+    ...)
+  ([page-name id]
+    ...))
 
 (def routes
-  {"GET /"
-   (fn [_req]
-     {:status 200
-      :body "<html><body><h1>It’s working!</h1></body></html>"})
-   "GET /pages/*"
-   (fn [req]
-     (let [page-name (first (:path-params req))]
-       (render-page page-name)))})
+  (router/routes
+    "GET /" []
+    {:status 200
+     :body "<html><body><h1>It’s working!</h1></body></html>"}
+    
+    ;; inline parameter
+    "GET /pages/*" [page-name]
+    (render-page page-name)
+    
+    ;; parameter from request
+    "GET /pages/*/*" req
+    (let [[page-name id] (:path-params req)]
+      (render-page page-name id))
+    
+    ;; wildcard parameter
+    "GET /files/**" [path]
+    (response/file-response path {:root "files"})))
 
 (defn handler []
-  (-> (router/router routes)
-      (wrap-params)))
+  (router/router routes))
 
 (defn -main [& _args]
-  (run-jetty (handler) {:port 3001 :join? false}))
-
-(comment
-  (-main))
+  (jetty/run-jetty (handler) {:port 8000}))
 ```
 
 ## Scope
