@@ -9,3 +9,5 @@
 pom.xml
 pom.xml.asc
 .rebl
+/.clj-kondo/.cache
+.repl-port

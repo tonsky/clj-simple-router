@@ -1,0 +1,17 @@
+(ns ^:no-doc hooks.routes
+  "A clj-kondo hook to allow linting of `routes` macro."
+  (:require
+    [clj-kondo.hooks-api :as api]))
+
+(defn routes-hook [form]
+  (let [[_ & body] (:children (:node form))]
+    {:node
+     (api/list-node
+       (list*
+         (api/token-node 'do)
+         (for [[_ bindings body] (partition 3 body)]
+           (api/list-node
+             (list
+               (api/token-node 'fn)
+               bindings
+               body)))))}))

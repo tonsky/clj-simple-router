@@ -3,7 +3,6 @@
     [clj-simple-router.core :as router]
     [clojure.test :as test :refer [is are deftest testing]]))
 
-
 (deftest test-basics
   (let [routes  {"GET  /"                 :get-index
                  "GET  /login"            :get-login
@@ -27,6 +26,31 @@
       "GET  /any"                :get-any     ["any"]
       "GET  /any/other"          :get-all     ["any/other"]
       "POST /article/123/update" :all         ["POST" "article/123/update"])))
+
+(deftest test-routes
+  (let [routes  (router/routes
+                  "GET  /"                 []            [:get-index]
+                  "GET  /login"            []            [:get-login]
+                  "POST /login"            []            [:post-login]
+                  "GET  /article/*"        [id]          [:get-article id]
+                  "GET  /article/*/update" [id]          [:get-article-any-update id]
+                  "*    /article/*"        [method id]   [:any-article method id]
+                  "GET  /*"                [path]        [:get-any path]
+                  "GET  /**"               [path]        [:get-all path]
+                  "*    /**"               [method path] [:all method path])
+        router (router/router routes)]
+    (are [method uri match] (= match (router {:request-method method, :uri uri}))
+      :get  "/"                   [:get-index]
+      :get  "/login"              [:get-login]
+      :post "/login"              [:post-login]
+      :head "/login"              [:all "HEAD" "login"]
+      :get  "/article/123"        [:get-article "123"]
+      :post "/article/123"        [:any-article "POST" "123"]
+      :get  "/article"            [:get-any "article"]
+      :get  "/article/123/update" [:get-article-any-update "123"]
+      :get  "/any"                [:get-any "any"]
+      :get  "/any/other"          [:get-all "any/other"]
+      :post "/article/123/update" [:all "POST" "article/123/update"])))
 
 (deftest test-wildcards
   (let [routes {"GET /**"   :a
@@ -72,7 +96,6 @@
       :get  "/any"                :get-any     ["any"]
       :get  "/any/other"          :get-all     ["any/other"]
       :post "/article/123/update" :all         ["POST" "article/123/update"])))
-      
 
 (comment
   (test/test-ns *ns*)
