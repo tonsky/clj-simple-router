@@ -12,6 +12,8 @@
          (for [[_ bindings body] (partition 3 body)]
            (api/list-node
              (list
-              (api/token-node 'fn)
-              (api/vector-node [bindings])
+               (api/token-node 'fn)
+               (if (api/vector-node? bindings)
+                 bindings
+                 (api/vector-node [bindings]))
                body)))))}))

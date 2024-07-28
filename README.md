@@ -5,7 +5,7 @@
 Add this to deps.edn:
 
 ```
-io.github.tonsky/clj-simple-router {:mvn/version "0.1.1"}
+io.github.tonsky/clj-simple-router {:mvn/version "0.1.2"}
 ```
 
 ## Rationale

@@ -37,6 +37,7 @@
                   "*    /article/*"        [method id]   [:any-article method id]
                   "GET  /*"                [path]        [:get-any path]
                   "GET  /**"               [path]        [:get-all path]
+                  "GET  /*/*/*"            req           [:get-deep (:path-params req)]
                   "*    /**"               [method path] [:all method path])
         router (router/router routes)]
     (are [method uri match] (= match (router {:request-method method, :uri uri}))
@@ -50,6 +51,7 @@
       :get  "/article/123/update" [:get-article-any-update "123"]
       :get  "/any"                [:get-any "any"]
       :get  "/any/other"          [:get-all "any/other"]
+      :get  "/a/b/c"              [:get-deep ["a" "b" "c"]]
       :post "/article/123/update" [:all "POST" "article/123/update"])))
 
 (deftest test-wildcards
